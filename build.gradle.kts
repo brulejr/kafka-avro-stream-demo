@@ -1,0 +1,76 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+import org.gradle.api.tasks.testing.logging.TestLogEvent.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+	id("org.springframework.boot") version "3.2.0" apply false
+	id("io.spring.dependency-management") version "1.1.4"
+	id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1"
+	kotlin("jvm") version "1.9.20"
+	kotlin("plugin.spring") version "1.9.20"
+}
+
+group = "io.jrb.labs"
+version = "0.0.1-SNAPSHOT"
+
+java.sourceCompatibility = JavaVersion.VERSION_20
+
+val avroVersion = "1.11.3"
+val junitJupiterVersion = "1.19.3"
+val kafkaAvroSerializer = "7.5.2"
+val springCloudVersion = "2023.0.0"
+
+allprojects {
+	repositories {
+		mavenCentral()
+		maven { url = uri("https://packages.confluent.io/maven") }
+	}
+}
+
+subprojects {
+
+	apply(plugin = "org.springframework.boot")
+	apply(plugin = "io.spring.dependency-management")
+	apply(plugin = "com.github.davidmc24.gradle.plugin.avro")
+	apply(plugin = "org.jetbrains.kotlin.jvm")
+	apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+
+	dependencies {
+		implementation("org.jetbrains.kotlin:kotlin-reflect")
+		implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+
+		implementation("org.springframework.boot:spring-boot-starter-webflux")
+		implementation("org.springframework.cloud:spring-cloud-starter-stream-kafka")
+
+		implementation("io.confluent:kafka-avro-serializer:${kafkaAvroSerializer}")
+		implementation("org.apache.avro:avro:${avroVersion}")
+
+		testImplementation("org.springframework.boot:spring-boot-starter-test")
+		testImplementation("org.testcontainers:junit-jupiter:${junitJupiterVersion}")
+	}
+
+	dependencyManagement {
+		imports {
+			mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
+		}
+	}
+
+	tasks.withType<KotlinCompile> {
+		kotlinOptions {
+			freeCompilerArgs = listOf("-Xjsr305=strict")
+			jvmTarget = "20"
+		}
+	}
+
+	tasks.withType<Test> {
+		useJUnitPlatform()
+		testLogging {
+			events(PASSED, SKIPPED, FAILED)
+			exceptionFormat = FULL
+			showExceptions = true
+			showCauses = true
+			showStackTraces = true
+		}
+	}
+
+}
